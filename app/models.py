@@ -10,45 +10,53 @@ class Base(DeclarativeBase):
 db = SQLAlchemy(model_class = Base)
 
 
+service_mechanics = db.Table(
+    "service_mechanics",
+    Base.metadata,
+    db.Column("service_id", db.ForeignKey("service_tickets.id")),
+    db.Column("mechanic_id", db.ForeignKey("mechanics.id")),
+)
 
-class Member(Base):
-    __tablename__ = 'members'
+
+class Customer(Base):
+    __tablename__ = 'customers'
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(db.String(255), nullable=False)
     email: Mapped[str] = mapped_column(db.String(360), nullable=False, unique=True)
-    DOB: Mapped[date]
     password: Mapped[str] = mapped_column(db.String(255), nullable=False)
+    phone: Mapped[str] = mapped_column(db.String(15), nullable=False)
 
-    loans: Mapped[List['Loan']] = db.relationship('Loan', back_populates='member') # Corrected relationship attribute
+    service_tickets: Mapped[List["ServiceTicket"]] = db.relationship(
+        "ServiceTicket", back_populates="customer"
+    )
 
-
-loan_book = db.Table(
-    'loan_book',
-    Base.metadata,
-    db.Column('loan_id', db.ForeignKey('loans.id')),
-    db.Column('book_id', db.ForeignKey('books.id'))
-)
-
-
-class Loan(Base):
-    __tablename__='loans'
+class Mechanic(Base):
+    __tablename__ = "mechanics"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    loan_date: Mapped[date] = mapped_column(db.Date)
-    member_id: Mapped[int] = mapped_column(db.ForeignKey('members.id'))
+    name: Mapped[str] = mapped_column(db.String(250), nullable=False)
+    email: Mapped[str] = mapped_column(db.String(250), nullable=False, unique=True)
+    phone: Mapped[str] = mapped_column(db.String(15), nullable=False) 
+    salary: Mapped[float] = mapped_column(db.Numeric(10, 2), nullable=False) 
 
-    member: Mapped['Member'] = db.relationship('Member', back_populates='loans')
-    books: Mapped[List['Book']] = db.relationship('Book', secondary=loan_book, back_populates='loans')
+    service_tickets: Mapped[List['ServiceTicket']] = db.relationship(
+        secondary=service_mechanics, back_populates="mechanics"
+    )
 
 
-class Book(Base):
-    __tablename__ = "books"
+class ServiceTicket(Base):
+    __tablename__ = "service_tickets"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    author: Mapped[str] = mapped_column(db.String(255), nullable=False)
-    genre: Mapped[str] = mapped_column(db.String(255), nullable=False)
-    desc: Mapped[str] = mapped_column(db.String(255), nullable=False)
-    title: Mapped[str] = mapped_column(db.String(255), nullable=False)
+    VIN: Mapped[str] = mapped_column(db.String(17), nullable=False)
+    service_date: Mapped[date] = mapped_column(db.Date)
+    service_desc: Mapped[str] = mapped_column(db.String(500), nullable=False)
+    customer_id: Mapped[int] = mapped_column(db.ForeignKey("customers.id"))
 
-    loans: Mapped[List['Loan']] = db.relationship('Loan', secondary=loan_book, back_populates='books')
+    customer: Mapped["Customer"] = db.relationship(
+        "Customer", back_populates="service_tickets"
+    )
+    mechanics: Mapped[List["Mechanic"]] = db.relationship(
+        "Mechanic", secondary=service_mechanics, back_populates="service_tickets"
+    )
