@@ -4,9 +4,12 @@ from sqlalchemy import select
 from marshmallow import ValidationError
 from app.models import ServiceTicket, db, Mechanic
 from . import service_tickets_bp
+from app.extensions import limiter, cache
 
 
 @service_tickets_bp.route("/", methods=["POST"])
+@limiter.limit("5 per hour")
+@cache.cached(timeout=60)
 def add_ticket():
     try:
         ticket_data = service_ticket_schema.load(request.json)

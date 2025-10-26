@@ -4,9 +4,39 @@ from flask import request, jsonify
 from sqlalchemy import select
 from marshmallow import ValidationError
 from app.models import Customer, db 
+from app.extensions import limiter, cache
+from app.utils.util import encode_token, token_required
+from app.blueprints.service_tickets.schemas import service_tickets_schema
+
+
+@customers_bp.route("/login", methods=['POST'])
+def login():
+    try:
+        credentials = request.json
+        email = credentials['email']
+        password = credentials['password']
+    except KeyError:
+        return jsonify({'messages': 'Invalid payload, expecting email and password'}), 400
+    
+    query = select(Customer).where(Customer.email == email)
+    customer = db.session.execute(query).scalar_one_or_none()
+
+    if customer and customer.password == password: 
+        auth_token = encode_token(customer.id)
+
+        response = {
+            "status": "success",
+            "message": "Successfully Logged In",
+            "auth_token": auth_token
+        }
+        return jsonify(response), 200
+    else: 
+        return jsonify({'message': "Invalid email or password"}), 401
 
 
 @customers_bp.route("/", methods=['POST'])
+@limiter.limit("3 per hour")  #limits user to creating 3 profiles per hour
+@cache.cached(timeout=60)
 def create_customer():
     try:
         customer_data = customer_schema.load(request.json)
@@ -39,7 +69,8 @@ def get_customer(customer_id):
     return jsonify({"error": "Customer not found."}), 404
 
 
-@customers_bp.route("/<int:customer_id>", methods=['PUT'])
+@customers_bp.route("/", methods=['PUT'])
+@token_required
 def update_customer(customer_id):
     customer = db.session.get(Customer, customer_id)
 
@@ -58,9 +89,12 @@ def update_customer(customer_id):
     return customer_schema.jsonify(customer), 200
 
 
-@customers_bp.route("/<int:customer_id>", methods=['DELETE'])
+@customers_bp.route("/", methods=['DELETE'])
+@limiter.limit("10 per day")
+@token_required
 def delete_customer(customer_id):
-    customer = db.session.get(Customer, customer_id)
+    query = select(Customer).where(Customer.id == customer_id)
+    customer = db.session.execute(query).scalars().first()
 
     if not customer:
         return jsonify({"error": "Customer not found."}), 404
@@ -68,3 +102,16 @@ def delete_customer(customer_id):
     db.session.delete(customer)
     db.session.commit()
     return jsonify({"message": f'Customer id: {customer_id}, successfully deleted.'}), 200
+
+
+@customers_bp.route("/<int:customer_id>/service_tickets", methods=['GET'])
+@token_required
+def get_customer_service_tickets(customer_id):
+    customer = db.session.get(Customer, customer_id)
+    if not customer:
+        return jsonify({"error": "Customer not found."}), 404
+
+   
+    tickets = customer.service_tickets
+    
+    return service_tickets_schema.jsonify(tickets), 200
