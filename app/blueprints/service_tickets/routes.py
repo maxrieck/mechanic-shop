@@ -1,4 +1,4 @@
-from .schemas import service_ticket_schema, service_tickets_schema
+from .schemas import service_ticket_schema, service_tickets_schema, edit_ticket_schema, return_ticket_schema
 from flask import request, jsonify
 from sqlalchemy import select
 from marshmallow import ValidationError
@@ -95,3 +95,31 @@ def get_ticket(id):
         return jsonify({"Error": "Ticket not found"}), 404
 
     return service_ticket_schema.jsonify(ticket), 200
+
+# add or remove multiple mechanics for ticket
+@service_tickets_bp.route("/<int:ticket_id>", methods=['PUT'])
+def edit_service_ticket(ticket_id):
+    try:
+        ticket_edits = edit_ticket_schema.load(request.json)
+    except ValidationError as e:
+        return jsonify(e.messages), 400
+
+    query = select(ServiceTicket).where(ServiceTicket.id == ticket_id)
+    ticket = db.session.execute(query).scalars().first()
+
+    for mechanic_id in ticket_edits['add_mechanic_ids']:
+        query = select(Mechanic).where(Mechanic.id == mechanic_id)
+        mechanic = db.session.execute(query).scalars().first()
+
+        if mechanic and mechanic not in ticket.mechanics:
+                ticket.mechanics.append(mechanic)
+    
+    for mechanic_id in ticket_edits['remove_mechanic_ids']:
+        query = select(Mechanic).where(Mechanic.id == mechanic_id)
+        mechanic = db.session.execute(query).scalars().first()
+
+        if mechanic and mechanic in ticket.mechanics:
+                ticket.mechanics.remove(mechanic)
+    
+    db.session.commit()
+    return return_ticket_schema.jsonify(ticket)
