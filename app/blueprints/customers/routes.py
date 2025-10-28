@@ -103,7 +103,7 @@ def delete_customer(customer_id):
     db.session.commit()
     return jsonify({"message": f'Customer id: {customer_id}, successfully deleted.'}), 200
 
-
+# view service tickets for a specific customer
 @customers_bp.route("/<int:customer_id>/service_tickets", methods=['GET'])
 @token_required
 def get_customer_service_tickets(customer_id):
@@ -115,3 +115,12 @@ def get_customer_service_tickets(customer_id):
     tickets = customer.service_tickets
     
     return service_tickets_schema.jsonify(tickets), 200
+
+@customers_bp.route("/search", methods=['GET'])
+def search_customer():
+    name = request.args.get('name')
+
+    query = select(Customer).where(Customer.name.like(f'%{name}%'))
+    customers = db.session.execute(query).scalars().all()
+
+    return customers_schema.jsonify(customers)

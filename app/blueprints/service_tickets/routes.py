@@ -123,3 +123,4 @@ def edit_service_ticket(ticket_id):
     
     db.session.commit()
     return return_ticket_schema.jsonify(ticket)
+
