@@ -51,15 +51,21 @@ def create_customer():
     db.session.commit()
     return customer_schema.jsonify(new_customer), 201
 
-
+# get all customers. This route is paginated
 @customers_bp.route("/", methods=['GET'])
 def get_customers():
-    query = select(Customer)
-    customers = db.session.execute(query).scalars().all()
+    try:
+        page = int(request.args.get('page'))
+        per_page = int(request.args.get('per_page'))
+        query = select(Customer)
+        customers = db.paginate(query, page=page, per_page=per_page)
+        return customers_schema.jsonify(customers)
+    except:
+        query = select(Customer)
+        customers = db.session.execute(query).scalars().all()
+        return customers_schema.jsonify(customers)
 
-    return customers_schema.jsonify(customers)
-
-
+# get a specific customer by id
 @customers_bp.route("/<int:customer_id>", methods=['GET'])
 def get_customer(customer_id):
     customer = db.session.get(Customer, customer_id)
@@ -68,7 +74,7 @@ def get_customer(customer_id):
         return customer_schema.jsonify(customer), 200
     return jsonify({"error": "Customer not found."}), 404
 
-
+# edit customer. requires login
 @customers_bp.route("/", methods=['PUT'])
 @token_required
 def update_customer(customer_id):
@@ -88,7 +94,7 @@ def update_customer(customer_id):
     db.session.commit()
     return customer_schema.jsonify(customer), 200
 
-
+# delete customer. requires login
 @customers_bp.route("/", methods=['DELETE'])
 @limiter.limit("10 per day")
 @token_required
@@ -116,6 +122,7 @@ def get_customer_service_tickets(customer_id):
     
     return service_tickets_schema.jsonify(tickets), 200
 
+# search for customer by name
 @customers_bp.route("/search", methods=['GET'])
 def search_customer():
     name = request.args.get('name')

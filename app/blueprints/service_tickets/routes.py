@@ -2,7 +2,7 @@ from .schemas import service_ticket_schema, service_tickets_schema, edit_ticket_
 from flask import request, jsonify
 from sqlalchemy import select
 from marshmallow import ValidationError
-from app.models import ServiceTicket, db, Mechanic
+from app.models import ServiceTicket, db, Mechanic, Inventory
 from . import service_tickets_bp
 from app.extensions import limiter, cache
 
@@ -43,6 +43,23 @@ def add_ticket():
         ),
         201,
     )
+
+
+@service_tickets_bp.route("/<int:ticket_id>/add_item/<int:inventory_id>", methods=["PUT"])
+@limiter.limit("10 per hour")
+def add_item(ticket_id, inventory_id):
+    ticket = db.session.get(ServiceTicket, ticket_id)
+    item = db.session.get(Inventory, inventory_id)
+
+    if ticket and item:
+        if item not in ticket.inventory_items:
+            ticket.inventory_items.append(item)
+            db.session.commit()
+            return jsonify({"Message": "Successfully added item to ticket."}), 200
+        else:
+            return jsonify({"Message": "Item is already being used on this ticket."}), 400
+    else:
+        return jsonify({"Message": "Invalid ticket id or inventory id."}), 400
 
 
 

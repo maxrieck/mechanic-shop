@@ -9,7 +9,7 @@ class Base(DeclarativeBase):
 
 db = SQLAlchemy(model_class = Base)
 
-
+# junction table for mechanics and service tickets
 service_mechanics = db.Table(
     "service_mechanics",
     Base.metadata,
@@ -17,6 +17,13 @@ service_mechanics = db.Table(
     db.Column("mechanic_id", db.ForeignKey("mechanics.id")),
 )
 
+# junction table for inventory and service tickets
+service_inventory = db.Table(
+    "service_inventory",
+    Base.metadata,
+    db.Column("service_id", db.ForeignKey("service_tickets.id")),
+    db.Column("inventory_id", db.ForeignKey("inventory.id"))
+)
 
 class Customer(Base):
     __tablename__ = 'customers'
@@ -60,3 +67,20 @@ class ServiceTicket(Base):
     mechanics: Mapped[List["Mechanic"]] = db.relationship(
         "Mechanic", secondary=service_mechanics, back_populates="service_tickets"
     )
+    inventory_items: Mapped[List["Inventory"]] = db.relationship(
+        "Inventory", secondary=service_inventory, back_populates="service_tickets"
+    )
+
+
+class Inventory(Base):
+    __tablename__="inventory"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(db.String(100), nullable=False)
+    price: Mapped[float] = mapped_column(db.Numeric(10, 2), nullable=False)
+
+    service_tickets: Mapped[List["ServiceTicket"]] = db.relationship(
+        "ServiceTicket", secondary=service_inventory, back_populates="inventory_items"
+    )
+
+    
