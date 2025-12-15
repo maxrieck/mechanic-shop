@@ -20,19 +20,19 @@ def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
-        # looks fo token in Authorization header
+        # looks for token in Authorization header
         if 'Authorization' in request.headers: 
             token = request.headers['Authorization'].split(" ")[1]
         try:
             data = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
             customer_id = data['sub']
-        
         except jose.exceptions.ExpiredSignatureError:
             return jsonify({'message': 'Token has expired'}), 401
-        
         except jose.exceptions.JWTError:
             return jsonify({'message': 'Invalid Token'}), 401
-        
-        return f(*args, **kwargs)
-    
+        # Only inject customer_id if not already present in kwargs (for routes without customer_id in URL)
+        if 'customer_id' in kwargs:
+            return f(*args, **kwargs)
+        else:
+            return f(customer_id, *args, **kwargs)
     return decorated

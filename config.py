@@ -4,8 +4,12 @@ class DevelopmentConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DEBUG = True
 
-class TestingConfig:
-    pass
+class TestingConfig: 
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///testing.db'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    DEBUG = True
+    CACHE_TYPE = 'SImpleCache'
+
 
 class ProductionConfig:
     pass

@@ -15,14 +15,13 @@ def create_mechanic():
         mechanic_data = mechanic_schema.load(request.json)
     except ValidationError as e: 
         return jsonify(e.messages), 400
-    query = select(Mechanic).where(Mechanic.email == mechanic_data['email'])
-    existing_mechanics = db.session.execute(query). scalars().all()
+    query = select(Mechanic).where(Mechanic.email == mechanic_data.email)
+    existing_mechanics = db.session.execute(query).scalars().all()
     if existing_mechanics:
         return jsonify({"error": "Email already associated with an account"}), 400 
-    new_mechanic = Mechanic(**mechanic_data)
-    db.session.add(new_mechanic)
+    db.session.add(mechanic_data)
     db.session.commit()
-    return mechanic_schema.jsonify(new_mechanic), 201
+    return mechanic_schema.jsonify(mechanic_data), 201
 
 
 @mechanics_bp.route("/", methods=['GET'])
@@ -53,10 +52,11 @@ def update_mechanic(mechanic_id):
         mechanic_data = mechanic_schema.load(request.json)
     except ValidationError as e:
         return jsonify(e.messages), 400
-    
-    for key, value in mechanic_data.items():
-        setattr(mechanic, key, value)
-
+    # mechanic_data is a Mechanic instance, update fields manually
+    mechanic.name = mechanic_data.name
+    mechanic.email = mechanic_data.email
+    mechanic.phone = mechanic_data.phone
+    mechanic.salary = mechanic_data.salary
     db.session.commit()
     return mechanic_schema.jsonify(mechanic), 200
 
