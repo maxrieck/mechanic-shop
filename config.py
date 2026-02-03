@@ -1,6 +1,9 @@
+import os
+from dotenv import load_dotenv
+
 
 class DevelopmentConfig:
-    SQLALCHEMY_DATABASE_URI = 'mysql+mysqlconnector://root:password%401@localhost:3306/library_db'
+    SQLALCHEMY_DATABASE_URI = f'mysql+mysqlconnector://root:{os.environ.get('DB_PASSWORD')}@localhost:3306/library_db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DEBUG = True
 
@@ -12,4 +15,5 @@ class TestingConfig:
 
 
 class ProductionConfig:
-    pass
+    SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI')
+    CACHE_TYPE = 'SimpleCache'
